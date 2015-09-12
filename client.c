@@ -7,8 +7,6 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 
-#include "headers.h"
-
 // The packet length
 #define PCKT_LEN 8192
 
@@ -51,30 +49,83 @@ unsigned short csum(unsigned short *buf, int nwords) {
 	return ( unsigned short )( ~sum );
 }
 
-void checkargs( int argc, char *argv[] ) {
-	if ( argc != 5 ) {
-		printf( "- Invalid parameters!!!\n" );
-		printf( "- Usage %s <source hostname/IP> <source port> <target hostname/IP> <target port>\n", argv[0] );
-		exit( -1 );
+int parse_optval( char *val, char *optparts[] ) {
+	char *str1;
+	unsigned int i;
+	char delim = ':';
+
+	for ( i = 0, str1 = val; i < 2; i++, str1 = NULL ) {
+		optparts[i] = strtok( str1, &delim );
 	}
+
+	return ( NULL == optparts[0] || NULL == optparts[1] ) ? 0 : 1;
+}
+
+void usage() {
+	printf( "\nUsage:\n" );
+	printf( "client [st]\n" );
+	printf( "\t-s Specify the source [hostname/ip]:[port] \n" );
+	printf( "\t-t Specify the target [hostname/ip]:[port] \n" );
+}
+
+int check_args( int argc, char *argv[], char *src[], char *tgt[] ) {
+	int c;
+
+	while ( ( c = getopt ( argc, argv, "s:t:" ) ) != -1 ) {
+		switch(c) {
+			case 's':
+				if ( !parse_optval( optarg, src ) ) {
+					printf( "invalid -s\n" );
+					return 0;
+				}
+				break;
+			case 't':
+				if ( !parse_optval( optarg, tgt ) ) {
+					printf( "invalid -t\n" );
+					return 0;
+				}
+				break;
+			case '?':
+				if ( optopt == 's' ) {
+					printf( "\n-s parameter requires an option\n" );
+				} else if ( optopt == 't' ) {
+					printf( "\n-t parameter requires an option\n" );
+				} else {
+					printf( "\nunrecognized parameter: -%c\n", optopt );
+				}
+			default:
+				usage();
+				return 0;
+		}
+	}
+
+	return 1;
 }
 
 // Source IP, source port, target IP, target port from the command line arguments
 int main( int argc, char *argv[] ) {
 	int sd;
+	char *src[2];
+	char *tgt[2];
+
 	// No data/payload just datagram
 	char buffer[ PCKT_LEN ];
+
 	// Our own headers' structures
 	struct ipheader *ip = ( struct ipheader * )buffer;
 	struct udpheader *udp = ( struct udpheader * )( buffer + sizeof( struct ipheader ) );
+
 	// Source and destination addresses: IP and port
 	struct sockaddr_in sin, din;
+
 	int one = 1;
 	const int *val = &one;
 
 	memset( buffer, 0, PCKT_LEN );
 
-	checkargs( argc, argv );
+	if ( !check_args( argc, argv, src, tgt ) ) {
+		exit( -1 );
+	}
 
 	// Create a raw socket with UDP protocol
 	sd = socket( PF_INET, SOCK_RAW, IPPROTO_UDP );
@@ -93,12 +144,12 @@ int main( int argc, char *argv[] ) {
 	din.sin_family = AF_INET;
 
 	// Port numbers
-	sin.sin_port = htons( atoi( argv[2] ) );
-	din.sin_port = htons( atoi( argv[4] ) );
+	sin.sin_port = htons( atoi( src[1] ) );
+	din.sin_port = htons( atoi( tgt[1] ) );
 
 	// IP addresses
-	sin.sin_addr.s_addr = inet_addr( argv[1] );
-	din.sin_addr.s_addr = inet_addr( argv[3] );
+	sin.sin_addr.s_addr = inet_addr( src[0] );
+	din.sin_addr.s_addr = inet_addr( tgt[0] );
 
 	// Fabricate the IP header or we can use the
 	// standard header structures but assign our own values.
@@ -111,16 +162,16 @@ int main( int argc, char *argv[] ) {
 	ip->iph_protocol = 17; // UDP
 
 	// Source IP address, can use spoofed address here!!!
-	ip->iph_sourceip = inet_addr( argv[1] );
+	ip->iph_sourceip = inet_addr( src[0] );
 
 	// The destination IP address
-	ip->iph_destip = inet_addr( argv[3] );
+	ip->iph_destip = inet_addr( tgt[0] );
 
 	// Fabricate the UDP header. Source port number, redundant
-	udp->udph_srcport = htons( atoi( argv[2] ) );
+	udp->udph_srcport = htons( atoi( src[1] ) );
 
 	// Destination port number
-	udp->udph_destport = htons( atoi( argv[4] ) );
+	udp->udph_destport = htons( atoi( tgt[1] ) );
 	udp->udph_len = htons( sizeof( struct udpheader ) );
 
 	// Calculate the checksum for integrity
@@ -137,7 +188,7 @@ int main( int argc, char *argv[] ) {
 	// Send loop, send for every 2 second for 100 count
 	printf("Trying...\n");
 	printf("Using raw socket and UDP protocol\n");
-	printf("Using Source IP: %s port: %u, Target IP: %s port: %u.\n", argv[1], atoi(argv[2]), argv[3], atoi(argv[4]));
+	printf("Using Source IP: %s port: %u, Target IP: %s port: %u.\n", src[0], atoi(src[1]), tgt[0], atoi(tgt[1]));
 
 	int count;
 	for( count = 1; count <=20; count++ ) {
