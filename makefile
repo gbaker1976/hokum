@@ -1,9 +1,20 @@
-client:
-	if [ ! -d "./build" ]; then \
-	mkdir ./build; \
-	fi
+CC=gcc
+CFLAGS=-I.
+DEPS=
 
-	gcc ./client.c -o ./build/client;
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+bcast: mkdir bcast.o
+	$(CC) -o ./build/bcast ./bcast.o;
+
+listener: mkdir listener.o
+	$(CC) -o ./build/listener ./listener.o
 
 clean:
 	rm -Rf ./build;
+
+mkdir:
+		if [ ! -d "./build" ]; then \
+			mkdir ./build; \
+		fi
