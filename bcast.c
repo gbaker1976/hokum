@@ -13,8 +13,17 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include "fcproto.h"
 
 #define SERVERPORT 4950    // the port users will be connecting to
+
+// struct fcproto_hdr *build_header( cmd_kind cmd ) {
+//
+// }
+//
+// struct fcproto_pkt *build_packet( struct fcproto_hdr *hdr, char *data[] ) {
+//
+// }
 
 int main(int argc, char *argv[])
 {
@@ -49,16 +58,23 @@ int main(int argc, char *argv[])
 
     their_addr.sin_family = AF_INET;     // host byte order
     their_addr.sin_port = htons(SERVERPORT); // short, network byte order
-    their_addr.sin_addr = *( ( struct in_addr * ) he->h_addr );
+    their_addr.sin_addr = *( (struct in_addr *)he->h_addr );
     memset( their_addr.sin_zero, '\0', sizeof their_addr.sin_zero );
+
+    struct fcproto_pkt packet;
+
+    packet.hdr.seq = 1;
+    packet.hdr.tot = 1;
+    packet.hdr.cmd = CMD_ACK;
+    strcpy( packet.data, argv[2] );
 
     if (
           (numbytes = sendto(
             sockfd,
-            argv[2],
-            strlen(argv[2]),
+            &packet,
+            sizeof(packet),
             0,
-            (struct sockaddr *) &their_addr,
+            (struct sockaddr *)&their_addr,
             sizeof their_addr
           )
         ) == -1)

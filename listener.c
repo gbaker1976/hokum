@@ -12,10 +12,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include "fcproto.h"
 
 #define MYPORT "4950"	// the port users will be connecting to
-
-#define MAXBUFLEN 100
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -75,21 +74,35 @@ int main(void)
 	printf("listener: waiting to recvfrom...\n");
 
 	addr_len = sizeof their_addr;
-  
-	if ((numbytes = recvfrom(sockfd, buf, MAXBUFLEN-1 , 0,
+
+	if ((numbytes = recvfrom(sockfd, buf, MAXBUFLEN-1, 0,
 		(struct sockaddr *)&their_addr, &addr_len)) == -1) {
-		perror("recvfrom");
+		perror( "recvfrom" );
 		exit(1);
 	}
 
-	printf("listener: got packet from %s\n",
+	printf( "listener: got packet from %s\n",
 		inet_ntop(their_addr.ss_family,
 			get_in_addr((struct sockaddr *)&their_addr),
 			s, sizeof s));
 
 	printf("listener: packet is %d bytes long\n", numbytes);
-	buf[numbytes] = '\0';
-	printf("listener: packet contains \"%s\"\n", buf);
+
+	struct fcproto_pkt packet = *((struct fcproto_pkt *)buf);
+
+	if ( packet.hdr.cmd & CMD_REG ) {
+		printf( "listener: packet is a REG packet\n" );
+	}
+
+	if ( packet.hdr.cmd & CMD_ACK ) {
+		printf( "listener: packet is an ACK packet \n" );
+	}
+
+	if ( packet.hdr.cmd & CMD_QUEAS ) {
+		printf( "listener: packet is an QUEAS packet \n" );
+	}
+
+	printf( "listener: packet contains \"%s\"\n", packet.data );
 
 	close(sockfd);
 
