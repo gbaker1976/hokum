@@ -1,12 +1,12 @@
-CC=gcc
-CFLAGS=-I.
-DEPS=
+CC = gcc
+CFLAGS = -I.
+DEPS = 'fcproto.c'
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-bcast: mkdir bcast.o
-	$(CC) -o ./build/bcast ./bcast.o;
+bcast: mkdir bcast.o fcproto.o
+	$(CC) -o ./build/bcast ./bcast.o ./fcproto.o;
 
 listener: mkdir listener.o
 	$(CC) -o ./build/listener ./listener.o

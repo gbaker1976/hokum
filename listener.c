@@ -33,7 +33,7 @@ int main(void)
 	int rv;
 	int numbytes;
 	struct sockaddr_storage their_addr;
-	char buf[MAXBUFLEN];
+	char buf[FCPROTO_MAXBUFLEN];
 	socklen_t addr_len;
 	char s[INET6_ADDRSTRLEN];
 
@@ -75,7 +75,7 @@ int main(void)
 
 	addr_len = sizeof their_addr;
 
-	if ((numbytes = recvfrom(sockfd, buf, MAXBUFLEN-1, 0,
+	if ((numbytes = recvfrom(sockfd, buf, FCPROTO_MAXBUFLEN-1, 0,
 		(struct sockaddr *)&their_addr, &addr_len)) == -1) {
 		perror( "recvfrom" );
 		exit(1);

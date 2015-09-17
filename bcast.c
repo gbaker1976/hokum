@@ -17,14 +17,6 @@
 
 #define SERVERPORT 4950    // the port users will be connecting to
 
-// struct fcproto_hdr *build_header( cmd_kind cmd ) {
-//
-// }
-//
-// struct fcproto_pkt *build_packet( struct fcproto_hdr *hdr, char *data[] ) {
-//
-// }
-
 int main(int argc, char *argv[])
 {
     int sockfd;
@@ -61,33 +53,34 @@ int main(int argc, char *argv[])
     their_addr.sin_addr = *( (struct in_addr *)he->h_addr );
     memset( their_addr.sin_zero, '\0', sizeof their_addr.sin_zero );
 
-    struct fcproto_pkt packet;
+    struct fcproto_pkt pkts[1];
+    int n = 0;
+    int i;
 
-    packet.hdr.seq = 1;
-    packet.hdr.tot = 1;
-    packet.hdr.cmd = CMD_ACK;
-    strcpy( packet.data, argv[2] );
+    if ( (n = build_packets( CMD_REG, argv[2], pkts, NULL )) > 0 ) {
+      for( int i = 0; i < n; i++ ) {
+        if (
+              (numbytes = sendto(
+                sockfd,
+                &pkts[i],
+                sizeof(pkts[i]),
+                0,
+                (struct sockaddr *)&their_addr,
+                sizeof their_addr
+              )
+            ) == -1)
+        {
+            perror("sendto");
+            exit(1);
+        }
 
-    if (
-          (numbytes = sendto(
-            sockfd,
-            &packet,
-            sizeof(packet),
-            0,
-            (struct sockaddr *)&their_addr,
-            sizeof their_addr
-          )
-        ) == -1)
-    {
-        perror("sendto");
-        exit(1);
+        printf(
+          "sent %d bytes to %s\n",
+          numbytes,
+          inet_ntoa( their_addr.sin_addr )
+        );
+      }
     }
-
-    printf(
-      "sent %d bytes to %s\n",
-      numbytes,
-      inet_ntoa( their_addr.sin_addr )
-    );
 
     close( sockfd );
 
