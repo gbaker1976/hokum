@@ -8,6 +8,8 @@ typedef enum {
   CMD_CONT = 0x08
 } cmd_kind;
 
+typedef int (*proto_recv_cb)( int socket, uuid_t uuid );
+
 struct fcproto_hdr {
   char uuid[16];
   unsigned int seq;
@@ -21,3 +23,5 @@ struct fcproto_pkt {
 };
 
 extern int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uuid_t uuid );
+extern int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], proto_recv_cb callback );
+extern int wait_recv( int socket, uuid_t uuid );

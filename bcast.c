@@ -9,8 +9,8 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
+#include <uuid/uuid.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "fcproto.h"
@@ -53,33 +53,19 @@ int main(int argc, char *argv[])
     their_addr.sin_addr = *( (struct in_addr *)he->h_addr );
     memset( their_addr.sin_zero, '\0', sizeof their_addr.sin_zero );
 
-    struct fcproto_pkt pkts[1];
-    int n = 0;
-    int i;
+    int n;
+    uuid_t uuid;
+    uuid_generate( uuid );
 
-    if ( (n = build_packets( CMD_REG, argv[2], pkts, NULL )) > 0 ) {
-      for( int i = 0; i < n; i++ ) {
-        if (
-              (numbytes = sendto(
-                sockfd,
-                &pkts[i],
-                sizeof(pkts[i]),
-                0,
-                (struct sockaddr *)&their_addr,
-                sizeof their_addr
-              )
-            ) == -1)
-        {
-            perror("sendto");
-            exit(1);
-        }
-
-        printf(
-          "sent %d bytes to %s\n",
-          numbytes,
-          inet_ntoa( their_addr.sin_addr )
-        );
-      }
+    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid, argv[2], wait_recv )) > 0 ) {
+      printf(
+        "sent %d bytes to %s\n",
+        numbytes,
+        inet_ntoa( their_addr.sin_addr )
+      );
+    } else {
+      printf( 'Failed to send' );
+      exit(1);
     }
 
     close( sockfd );
