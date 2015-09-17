@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     uuid_t uuid;
     uuid_generate( uuid );
 
-    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid, argv[2], wait_recv )) > 0 ) {
+    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid, argv[2] )) > 0 ) {
       printf(
         "sent %d bytes to %s\n",
         numbytes,

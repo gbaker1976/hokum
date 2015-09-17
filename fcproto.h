@@ -23,5 +23,5 @@ struct fcproto_pkt {
 };
 
 extern int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uuid_t uuid );
-extern int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], proto_recv_cb callback );
+extern int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] );
 extern int wait_recv( int socket, uuid_t uuid );

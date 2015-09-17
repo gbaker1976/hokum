@@ -37,11 +37,17 @@ int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uui
   return num_pkts;
 }
 
+/*
+ *
+ */
 int wait_recv( int socket, uuid_t uuid ) {
   return 1;
 }
 
-int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], proto_recv_cb callback ) {
+/*
+ *
+ */
+int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
   struct fcproto_pkt pkts[1];
   int n = 0;
   int i;
@@ -62,21 +68,21 @@ int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], proto
           return -1;
       }
 
-      //callback();
+      //wait_recv( uuid_t uuid );
     }
   }
 
   return n;
 }
 
-int send_ack( int socket, uuid_t uuid, proto_recv_cb callback ) {
+int send_ack( int socket, uuid_t uuid ) {
   return 1;
 }
 
-int send_queas( int socket, proto_recv_cb callback ) {
+int send_queas( int socket ) {
   return 1;
 }
 
-int send_cont( int socket, uuid_t uuid, char data[], proto_recv_cb callback ) {
+int send_cont( int socket, uuid_t uuid, char data[] ) {
   return 1;
 }
