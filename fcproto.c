@@ -56,9 +56,16 @@ int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uui
 }
 
 /*
+ * Recieves command packets after sending command packets.
+ *
+ * type - Will be the command type.
+ *
+ * uuid - Will be a uuid of a previously created packet (if any).
+ * If uuid is NULL, the uuid field of the packet headers will be generated.s
+ *
  *
  */
-int wait_recv( cmd_kind type, uuid_t uuid ) {
+struct fcproto_pkt *wait_recv( cmd_kind type, uuid_t uuid ) {
   int sockfd;
   struct addrinfo hints, *servinfo, *p;
   int rv;
@@ -80,16 +87,15 @@ int wait_recv( cmd_kind type, uuid_t uuid ) {
 
   // loop through all the results and bind to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next) {
-    if ((sockfd = socket(p->ai_family, p->ai_socktype,
-        p->ai_protocol)) == -1) {
-          perror( "can\'t create socket" );
-      continue;
+    if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+		perror( "can\'t create socket" );
+		continue;
     }
 
     if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-      close(sockfd);
-      perror( "can\'t bind" );
-      continue;
+    	close(sockfd);
+    	perror( "can\'t bind" );
+    	continue;
     }
 
     break;
@@ -118,46 +124,31 @@ int wait_recv( cmd_kind type, uuid_t uuid ) {
     exit(1);
   }
 
-  struct fcproto_pkt packet = *((struct fcproto_pkt *)buf);
+  return (struct fcproto_pkt *)buf;
 
-  switch( packet.hdr.cmd ) {
-    case CMD_REG :
-
-      break;
-    case CMD_ACK :
-
-      break;
-    case CMD_QUEAS :
-
-      break;
-    case CMD_CONT :
-
-      break;
-  }
-
-  if ( packet.hdr.cmd & CMD_REG ) {
-    printf( "listener: packet is a REG packet\n" );
-  }
-
-  if ( packet.hdr.cmd & CMD_ACK ) {
-    printf( "listener: packet is an ACK packet \n" );
-  }
-
-  if ( packet.hdr.cmd & CMD_QUEAS ) {
-    printf( "listener: packet is an QUEAS packet \n" );
-  }
   return 1;
 }
 
 /*
+ * Builds a set of packets for a given command type.
+ *
+ * type - Will be the command type.
+ *
+ * data - Will be the data to send.
+ *
+ * pkt_arr - Will be the array of packets to save the packets to.
+ *
+ * uuid - Will be a uuid of a previously created packet (if any).
+ * If uuid is NULL, the uuid field of the packet headers will be generated.s
+ *
  *
  */
-int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
+int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
   struct fcproto_pkt pkts[1];
   int n = 0;
   int i;
 
-  if ((n = build_packets( CMD_REG, data, pkts, uuid ))) {
+  if ((n = build_packets( cmd_type, data, pkts, uuid ))) {
     for( int i = 0; i < n; i++ ) {
       if (
             (sendto(
@@ -180,14 +171,64 @@ int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
   return n;
 }
 
-int send_ack( int socket, uuid_t uuid ) {
-  return 1;
+/*
+ * Sends a REG command packet.
+ *
+ * socket - A socket.
+ *
+ * addr - Address structure for destination.
+ *
+ * uuid - Will be a uuid of a previously created packet (if any).
+ * If uuid is NULL, the uuid field of the packet headers will be generated.s
+ *
+ * data - Array of characters to send a payload.
+ *
+ */
+int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
+  return send_cmd( CMD_REG, socket, addr, uuid, data );
 }
 
-int send_queas( int socket ) {
-  return 1;
+/*
+ * Sends a REG command packet.
+ *
+ * socket - A socket.
+ *
+ * addr - Address structure for destination.
+ *
+ * uuid - Will be a uuid of a previously created packet (if any).
+ * If uuid is NULL, the uuid field of the packet headers will be generated.s
+ *
+ */
+int send_ack( int socket, struct sockaddr *addr, uuid_t uuid ) {
+  return send_cmd( CMD_ACK, socket, addr, uuid, NULL );
 }
 
-int send_cont( int socket, uuid_t uuid, char data[] ) {
-  return 1;
+/*
+ * Sends a QUEAS command packet.
+ *
+ * socket - A socket.
+ *
+ * addr - Address structure for destination.
+ *
+ * uuid - Will be a uuid of a previously created packet (if any).
+ * If uuid is NULL, the uuid field of the packet headers will be generated.s
+ *
+ */
+int send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
+  return send_cmd( CMD_QUEAS, socket, addr, uuid, data );
+}
+
+/*
+ * Sends a CONT command packet.
+ *
+ * socket - A socket.
+ *
+ * addr - Address structure for destination.
+ *
+ * uuid - Will be a uuid of a previously created packet (if any).
+ * If uuid is NULL, the uuid field of the packet headers will be generated.s
+ *
+ */
+int send_cont( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
+  return send_cmd( CMD_CONT, socket, addr, uuid, data );
 }
