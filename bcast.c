@@ -17,6 +17,10 @@
 
 #define SERVERPORT 4950    // the port users will be connecting to
 
+int handle_packet_cb ( struct fcproto_pkt *pkt ) {
+	return 1;
+}
+
 int main(int argc, char *argv[])
 {
     int sockfd;
@@ -57,14 +61,14 @@ int main(int argc, char *argv[])
     uuid_t uuid;
     uuid_generate( uuid );
 
-    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid, argv[2] )) > 0 ) {
+    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid, argv[2], handle_packet_cb )) > 0 ) {
       printf(
         "sent %d bytes to %s\n",
         numbytes,
         inet_ntoa( their_addr.sin_addr )
       );
     } else {
-      printf( 'Failed to send' );
+      printf( "Failed to send" );
       exit(1);
     }
 

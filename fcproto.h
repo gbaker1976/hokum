@@ -21,7 +21,7 @@ struct fcproto_pkt {
   struct fcproto_hdr hdr;
   char data[FCPROTO_MAXPACKETLEN];
 };
-
+typedef int (*cmd_cb)( struct fcproto_pkt *pkt );
 extern int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uuid_t uuid );
-extern int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] );
-extern struct fcproto_pkt *wait_recv( cmd_kind type, uuid_t uuid );
+extern int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb );
+extern int wait_recv( cmd_kind type, uuid_t uuid, cmd_cb cb );

@@ -65,7 +65,7 @@ int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uui
  *
  *
  */
-struct fcproto_pkt *wait_recv( cmd_kind type, uuid_t uuid ) {
+int wait_recv( cmd_kind type, uuid_t uuid, cmd_cb cb ) {
   int sockfd;
   struct addrinfo hints, *servinfo, *p;
   int rv;
@@ -82,7 +82,7 @@ struct fcproto_pkt *wait_recv( cmd_kind type, uuid_t uuid ) {
 
   if ((rv = getaddrinfo(NULL, MYPORT, &hints, &servinfo)) != 0) {
     fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-    return 1;
+    return 0;
   }
 
   // loop through all the results and bind to the first we can
@@ -102,7 +102,7 @@ struct fcproto_pkt *wait_recv( cmd_kind type, uuid_t uuid ) {
   }
 
   if (p == NULL) {
-    return 2;
+    return 0;
   }
 
   freeaddrinfo(servinfo);
@@ -121,10 +121,10 @@ struct fcproto_pkt *wait_recv( cmd_kind type, uuid_t uuid ) {
     )
   {
     perror( "recvfrom" );
-    exit(1);
+    return 0;
   }
 
-  return (struct fcproto_pkt *)buf;
+  cb( (struct fcproto_pkt *)buf );
 
   return 1;
 }
@@ -143,7 +143,7 @@ struct fcproto_pkt *wait_recv( cmd_kind type, uuid_t uuid ) {
  *
  *
  */
-int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
+int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
   struct fcproto_pkt pkts[1];
   int n = 0;
   int i;
@@ -164,7 +164,7 @@ int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
           return -1;
       }
 
-      wait_recv( CMD_ACK, uuid );
+      wait_recv( CMD_ACK, uuid, cb );
     }
   }
 
@@ -184,8 +184,8 @@ int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
  * data - Array of characters to send a payload.
  *
  */
-int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
-  return send_cmd( CMD_REG, socket, addr, uuid, data );
+int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
+  return send_cmd( CMD_REG, socket, addr, uuid, data, cb );
 }
 
 /*
@@ -199,8 +199,8 @@ int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
  * If uuid is NULL, the uuid field of the packet headers will be generated.s
  *
  */
-int send_ack( int socket, struct sockaddr *addr, uuid_t uuid ) {
-  return send_cmd( CMD_ACK, socket, addr, uuid, NULL );
+int send_ack( int socket, struct sockaddr *addr, uuid_t uuid, cmd_cb cb ) {
+  return send_cmd( CMD_ACK, socket, addr, uuid, NULL, cb );
 }
 
 /*
@@ -214,8 +214,8 @@ int send_ack( int socket, struct sockaddr *addr, uuid_t uuid ) {
  * If uuid is NULL, the uuid field of the packet headers will be generated.s
  *
  */
-int send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
-  return send_cmd( CMD_QUEAS, socket, addr, uuid, data );
+int send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
+  return send_cmd( CMD_QUEAS, socket, addr, uuid, data, cb );
 }
 
 /*
@@ -229,6 +229,6 @@ int send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
  * If uuid is NULL, the uuid field of the packet headers will be generated.s
  *
  */
-int send_cont( int socket, struct sockaddr *addr, uuid_t uuid, char data[] ) {
-  return send_cmd( CMD_CONT, socket, addr, uuid, data );
+int send_cont( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
+  return send_cmd( CMD_CONT, socket, addr, uuid, data, cb );
 }
