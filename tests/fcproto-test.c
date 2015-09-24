@@ -11,13 +11,13 @@
 ssize_t sendto(int socket, const void *buffer, size_t length, int flags,
 	const struct sockaddr *dest_addr, socklen_t dest_len) {
 
-	return 0;
+	return (ssize_t)length;
 }
 
 ssize_t recvfrom(int socket, void *restrict buffer, size_t length, int flags,
 	struct sockaddr *restrict address, socklen_t *restrict address_len) {
 
-	return 0;
+	return (ssize_t)length;
 }
 // end mocks
 
@@ -73,7 +73,9 @@ test_send_cmd() {
  */
 static char *
 all_tests() {
-	pu_run_test(test_build_packets);
+	pu_run_test( test_build_packets );
+	pu_run_test( test_send_cmd );
+
 	return 0;
 }
 
@@ -87,11 +89,12 @@ int
 main(int argc, char **argv) {
 	char *result = all_tests();
 
+	printf( ANSI_COLOR_BLUE "\n*** RUNNING TESTS***\n" ANSI_COLOR_RESET );
+
 	if (result != 0) {
-		printf( "%s\n", result );
-	}
-	else {
-		printf( "ALL TESTS PASSED\n" );
+		printf( ANSI_COLOR_RED "%s\n" ANSI_COLOR_RESET, result );
+	} else {
+		printf( ANSI_COLOR_GREEN "\nALL TESTS PASSED\n" ANSI_COLOR_RESET );
 	}
 
 	return result != 0;

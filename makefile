@@ -19,5 +19,8 @@ mkdir:
 			mkdir ./build; \
 		fi
 
-test: tests/fcproto-test.o fcproto.o
+test-build: tests/fcproto-test.o fcproto.o
 	$(CC) -o ./tests/fcproto-test ./tests/fcproto-test.o ./fcproto.o;
+
+test: test-build
+	./tests/fcproto-test
