@@ -8,8 +8,8 @@ DEPS = 'fcproto.c'
 bcast: mkdir bcast.o fcproto.o
 	$(CC) -o ./build/bcast ./bcast.o ./fcproto.o;
 
-listener: mkdir listener.o
-	$(CC) -o ./build/listener ./listener.o
+listener: mkdir listener.o fcproto.o
+	$(CC) -o ./build/listener ./listener.o ./fcproto.o;
 
 clean:
 	rm -Rf ./build;
@@ -18,3 +18,6 @@ mkdir:
 		if [ ! -d "./build" ]; then \
 			mkdir ./build; \
 		fi
+
+test: tests/fcproto-test.o fcproto.o
+	$(CC) -o ./tests/fcproto-test ./tests/fcproto-test.o ./fcproto.o;

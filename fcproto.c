@@ -13,13 +13,15 @@
 
 #define MYPORT "4950"
 
-void *get_in_addr(struct sockaddr *sa) {
+void *
+get_in_addr(struct sockaddr *sa) {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	}
 
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+
 
 /*
  * Builds a set of packets for a given command type.
@@ -35,7 +37,10 @@ void *get_in_addr(struct sockaddr *sa) {
  *
  *
  */
-int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uuid_t uuid ) {
+int
+build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[],
+	uuid_t uuid ) {
+
   int data_len = strlen( data );
   int num_pkts = sizeof( *pkt_arr ) / sizeof( pkt_arr[0] );
 
@@ -55,6 +60,7 @@ int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uui
   return num_pkts;
 }
 
+
 /*
  * Recieves command packets after sending command packets.
  *
@@ -65,7 +71,8 @@ int build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[], uui
  *
  *
  */
-int wait_recv( cmd_kind type, uuid_t uuid, cmd_cb cb ) {
+int
+wait_recv( cmd_kind type, uuid_t uuid, f_cmd_cb cb ) {
   int sockfd;
   struct addrinfo hints, *servinfo, *p;
   int rv;
@@ -129,6 +136,7 @@ int wait_recv( cmd_kind type, uuid_t uuid, cmd_cb cb ) {
   return 1;
 }
 
+
 /*
  * Builds a set of packets for a given command type.
  *
@@ -143,7 +151,10 @@ int wait_recv( cmd_kind type, uuid_t uuid, cmd_cb cb ) {
  *
  *
  */
-int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
+int
+send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
+	char data[], f_sender sender ) {
+
   struct fcproto_pkt pkts[1];
   int n = 0;
   int i;
@@ -151,7 +162,7 @@ int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
   if ((n = build_packets( cmd_type, data, pkts, uuid ))) {
     for( int i = 0; i < n; i++ ) {
       if (
-            (sendto(
+            (sender(
               socket,
               &pkts[i],
               sizeof(pkts[i]),
@@ -163,13 +174,12 @@ int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
       {
           return -1;
       }
-
-      wait_recv( CMD_ACK, uuid, cb );
     }
   }
 
   return n;
 }
+
 
 /*
  * Sends a REG command packet.
@@ -184,9 +194,12 @@ int send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
  * data - Array of characters to send a payload.
  *
  */
-int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
-  return send_cmd( CMD_REG, socket, addr, uuid, data, cb );
+int
+send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
+	f_sender sender ) {
+  return send_cmd( CMD_REG, socket, addr, uuid, data, sender );
 }
+
 
 /*
  * Sends a REG command packet.
@@ -199,9 +212,11 @@ int send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_c
  * If uuid is NULL, the uuid field of the packet headers will be generated.s
  *
  */
-int send_ack( int socket, struct sockaddr *addr, uuid_t uuid, cmd_cb cb ) {
-  return send_cmd( CMD_ACK, socket, addr, uuid, NULL, cb );
+int
+send_ack( int socket, struct sockaddr *addr, uuid_t uuid, f_sender sender ) {
+  return send_cmd( CMD_ACK, socket, addr, uuid, NULL, sender );
 }
+
 
 /*
  * Sends a QUEAS command packet.
@@ -214,9 +229,12 @@ int send_ack( int socket, struct sockaddr *addr, uuid_t uuid, cmd_cb cb ) {
  * If uuid is NULL, the uuid field of the packet headers will be generated.s
  *
  */
-int send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
-  return send_cmd( CMD_QUEAS, socket, addr, uuid, data, cb );
+int
+send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
+	f_sender sender ) {
+  return send_cmd( CMD_QUEAS, socket, addr, uuid, data, sender );
 }
+
 
 /*
  * Sends a CONT command packet.
@@ -229,6 +247,8 @@ int send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd
  * If uuid is NULL, the uuid field of the packet headers will be generated.s
  *
  */
-int send_cont( int socket, struct sockaddr *addr, uuid_t uuid, char data[], cmd_cb cb ) {
-  return send_cmd( CMD_CONT, socket, addr, uuid, data, cb );
+int
+send_cont( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
+	f_sender sender ) {
+  return send_cmd( CMD_CONT, socket, addr, uuid, data, sender );
 }

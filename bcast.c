@@ -61,8 +61,12 @@ int main(int argc, char *argv[])
     uuid_t uuid;
     uuid_generate( uuid );
 
-    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid, argv[2], handle_packet_cb )) > 0 ) {
-      printf(
+    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid,
+		argv[2] )) > 0 ) {
+
+			//wait_recv( CMD_ACK, uuid, cb );
+
+	  printf(
         "sent %d bytes to %s\n",
         numbytes,
         inet_ntoa( their_addr.sin_addr )
