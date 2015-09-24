@@ -13,16 +13,6 @@
 
 #define MYPORT "4950"
 
-void *
-get_in_addr(struct sockaddr *sa) {
-	if (sa->sa_family == AF_INET) {
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
-
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
-
 /*
  * Builds a set of packets for a given command type.
  *
@@ -60,6 +50,55 @@ build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[],
   return num_pkts;
 }
 
+int
+create_socket() {
+	int sockfd;
+	struct addrinfo hints, *servinfo, *p;
+    int rv;
+	int broadcast = 1;
+
+	memset( &hints, 0, sizeof hints );
+    hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE; // use my IP
+
+    if ((rv = getaddrinfo(NULL, MYPORT, &hints, &servinfo)) != 0) {
+      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+      return 0;
+    }
+
+    // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+      if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+  		perror( "can\'t create socket" );
+  		continue;
+      }
+
+	  // this call is what allows broadcast packets to be sent:
+      if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast,
+          sizeof broadcast) == -1) {
+          perror( "setsockopt (SO_BROADCAST)" );
+          exit(1);
+      }
+
+      if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+      	close(sockfd);
+      	perror( "can\'t bind" );
+      	continue;
+      }
+
+      break;
+    }
+
+    if (p == NULL) {
+      return 0;
+    }
+
+    freeaddrinfo(servinfo);
+
+	return sockfd;
+}
+
 
 /*
  * Recieves command packets after sending command packets.
@@ -72,49 +111,15 @@ build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[],
  *
  */
 int
-wait_recv( cmd_kind type, uuid_t uuid, f_cmd_cb cb ) {
-  int sockfd;
-  struct addrinfo hints, *servinfo, *p;
-  int rv;
+wait_recv( cmd_kind type, struct sockaddr *addr, uuid_t uuid, f_cmd_cb cb ) {
   int numbytes;
-  struct sockaddr_storage their_addr;
   char buf[FCPROTO_MAXBUFLEN];
   socklen_t addr_len;
-  char s[INET6_ADDRSTRLEN];
+  int sockfd;
 
-  memset( &hints, 0, sizeof hints );
-  hints.ai_family = AF_UNSPEC; // set to AF_INET to force IPv4
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_flags = AI_PASSIVE; // use my IP
+  addr_len = sizeof addr;
 
-  if ((rv = getaddrinfo(NULL, MYPORT, &hints, &servinfo)) != 0) {
-    fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-    return 0;
-  }
-
-  // loop through all the results and bind to the first we can
-  for(p = servinfo; p != NULL; p = p->ai_next) {
-    if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-		perror( "can\'t create socket" );
-		continue;
-    }
-
-    if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-    	close(sockfd);
-    	perror( "can\'t bind" );
-    	continue;
-    }
-
-    break;
-  }
-
-  if (p == NULL) {
-    return 0;
-  }
-
-  freeaddrinfo(servinfo);
-
-  addr_len = sizeof their_addr;
+  sockfd = create_socket();
 
   if (
       (numbytes = recvfrom(
@@ -122,7 +127,7 @@ wait_recv( cmd_kind type, uuid_t uuid, f_cmd_cb cb ) {
         buf,
         FCPROTO_MAXBUFLEN-1,
         0,
-        (struct sockaddr *)&their_addr,
+        addr,
         &addr_len
       )) == -1
     )
@@ -152,18 +157,21 @@ wait_recv( cmd_kind type, uuid_t uuid, f_cmd_cb cb ) {
  *
  */
 int
-send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
+send_cmd( cmd_kind cmd_type, struct sockaddr *addr, uuid_t uuid,
 	char data[], f_sender sender ) {
 
   struct fcproto_pkt pkts[1];
   int n = 0;
   int i;
+  int sockfd;
+
+  sockfd = create_socket();
 
   if ((n = build_packets( cmd_type, data, pkts, uuid ))) {
     for( int i = 0; i < n; i++ ) {
       if (
             (sender(
-              socket,
+              sockfd,
               &pkts[i],
               sizeof(pkts[i]),
               0,
@@ -195,9 +203,9 @@ send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
  *
  */
 int
-send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
+send_reg( struct sockaddr *addr, uuid_t uuid, char data[],
 	f_sender sender ) {
-  return send_cmd( CMD_REG, socket, addr, uuid, data, sender );
+  return send_cmd( CMD_REG, addr, uuid, data, sender );
 }
 
 
@@ -213,8 +221,8 @@ send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
  *
  */
 int
-send_ack( int socket, struct sockaddr *addr, uuid_t uuid, f_sender sender ) {
-  return send_cmd( CMD_ACK, socket, addr, uuid, NULL, sender );
+send_ack( struct sockaddr *addr, uuid_t uuid, f_sender sender ) {
+  return send_cmd( CMD_ACK, addr, uuid, NULL, sender );
 }
 
 
@@ -230,9 +238,9 @@ send_ack( int socket, struct sockaddr *addr, uuid_t uuid, f_sender sender ) {
  *
  */
 int
-send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
+send_queas( struct sockaddr *addr, uuid_t uuid, char data[],
 	f_sender sender ) {
-  return send_cmd( CMD_QUEAS, socket, addr, uuid, data, sender );
+  return send_cmd( CMD_QUEAS, addr, uuid, data, sender );
 }
 
 
@@ -248,7 +256,7 @@ send_queas( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
  *
  */
 int
-send_cont( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
+send_cont( struct sockaddr *addr, uuid_t uuid, char data[],
 	f_sender sender ) {
-  return send_cmd( CMD_CONT, socket, addr, uuid, data, sender );
+  return send_cmd( CMD_CONT, addr, uuid, data, sender );
 }

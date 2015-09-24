@@ -32,12 +32,12 @@ build_packets( cmd_kind type, char data[], struct fcproto_pkt pkt_arr[],
 	uuid_t uuid );
 
 extern int
-send_cmd( cmd_kind cmd_type, int socket, struct sockaddr *addr, uuid_t uuid,
+send_cmd( cmd_kind cmd_type, struct sockaddr *addr, uuid_t uuid,
 	char data[], f_sender sender );
 
 extern int
-send_reg( int socket, struct sockaddr *addr, uuid_t uuid, char data[],
+send_reg( struct sockaddr *addr, uuid_t uuid, char data[],
 	f_sender sender );
 
 extern int
-wait_recv( cmd_kind type, uuid_t uuid, f_cmd_cb cb );
+wait_recv( cmd_kind type, struct sockaddr *addr, uuid_t uuid, f_cmd_cb cb );

@@ -45,25 +45,35 @@ test_build_packets() {
 
 
 /**
- *
+ * Tests semd_cmd function.
  *
  */
 static char *
 test_send_cmd() {
 	int n;
-	int sockfd;
 	uuid_t uuid;
 	char *payload = "test";
 	struct sockaddr *addr;
 
 	uuid_generate( uuid );
 
-	n = send_cmd( CMD_REG, sockfd, addr, uuid, payload, sendto );
+	n = send_cmd( CMD_REG, addr, uuid, payload, sendto );
 
 	pu_assert( "FAIL: send_cmd number of packets not correct number. Expected 1.", n == 1 );
 
 	return 0;
 }
+
+/*
+ *
+ *
+ */
+// static char *
+// test_wait_recv() {
+// 	 cmd_kind type;
+// 	 uuid_t uuid;
+// 	 f_cmd_cb cb
+// }
 
 
 /*

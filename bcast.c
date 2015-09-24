@@ -23,11 +23,9 @@ int handle_packet_cb ( struct fcproto_pkt *pkt ) {
 
 int main(int argc, char *argv[])
 {
-    int sockfd;
     struct sockaddr_in their_addr; // connector's address information
     struct hostent *he;
     int numbytes;
-    int broadcast = 1;
     //char broadcast = '1'; // if that doesn't work, try this
 
     if (argc != 3) {
@@ -40,18 +38,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
-        perror("socket");
-        exit(1);
-    }
-
-    // this call is what allows broadcast packets to be sent:
-    if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &broadcast,
-        sizeof broadcast) == -1) {
-        perror("setsockopt (SO_BROADCAST)");
-        exit(1);
-    }
-
     their_addr.sin_family = AF_INET;     // host byte order
     their_addr.sin_port = htons(SERVERPORT); // short, network byte order
     their_addr.sin_addr = *( (struct in_addr *)he->h_addr );
@@ -61,8 +47,8 @@ int main(int argc, char *argv[])
     uuid_t uuid;
     uuid_generate( uuid );
 
-    if ( (n = send_reg( sockfd, (struct sockaddr *)&their_addr, uuid,
-		argv[2] )) > 0 ) {
+    if ( (n = send_reg( (struct sockaddr *)&their_addr, uuid, argv[2],
+		sendto )) > 0 ) {
 
 			//wait_recv( CMD_ACK, uuid, cb );
 
@@ -75,8 +61,6 @@ int main(int argc, char *argv[])
       printf( "Failed to send" );
       exit(1);
     }
-
-    close( sockfd );
 
     return 0;
 }
